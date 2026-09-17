@@ -26,7 +26,6 @@ export default function ReportEditor() {
   const [fileName, setFileName] = useState("尚未上传");
   const [preview, setPreview] = useState(false);
   const [publishState, setPublishState] = useState<{ open: boolean; loading: boolean; url: string; error: string }>({ open: false, loading: false, url: "", error: "" });
-  const [authReady, setAuthReady] = useState(!isSupabaseConfigured());
   const [menuOpen, setMenuOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -34,16 +33,7 @@ export default function ReportEditor() {
   const weekId = searchParams.get("weekId");
 
   useEffect(() => {
-    const supabase = getSupabase();
-    if (!supabase) return;
-    supabase.auth.getUser().then(({ data: auth }) => {
-      if (!auth.user) router.replace("/login");
-      else setAuthReady(true);
-    });
-  }, [router]);
-
-  useEffect(() => {
-    if (!authReady || !weekId) return;
+    if (!weekId) return;
     const supabase = getSupabase();
     if (!supabase) {
       const report = getLocalReport(weekId);
@@ -54,7 +44,7 @@ export default function ReportEditor() {
       if (report) applyLoadedReport(report as WeeklyReport);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authReady, weekId]);
+  }, [weekId]);
 
   function applyLoadedReport(report: WeeklyReport) {
     setStart(report.period_start);
@@ -162,13 +152,6 @@ export default function ReportEditor() {
     setMenuOpen(false);
   }
 
-  async function signOut() {
-    await getSupabase()?.auth.signOut();
-    router.replace("/login");
-  }
-
-  if (!authReady) return <div className="center-state"><div className="spinner"/><p>正在验证编辑权限…</p></div>;
-
   if (preview) return <><AppHeader compact actions={<button className="button" onClick={() => setPreview(false)}>返回编辑</button>}/><div className="preview-ribbon">预览模式 · 内容尚未发布</div><BossReportView data={data} start={start} end={end}/></>;
 
   return (
@@ -177,10 +160,10 @@ export default function ReportEditor() {
         <label className="button primary file-button"><UploadIcon/>上传任务池 Excel<input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={(e) => handleFile(e.target.files?.[0])}/></label>
         <button className="button" onClick={() => setPreview(true)}><EyeIcon/>预览老板视角</button>
         <button className="button publish" onClick={publish}><SendIcon/>发布周报</button>
-        <div className="more-wrap"><button className="icon-button" aria-label="更多操作" onClick={() => setMenuOpen((open) => !open)}><MoreIcon/></button>{menuOpen && <div className="more-menu"><button onClick={exportExcel}>导出 Excel</button><button onClick={() => router.push("/history")}>历史周报</button>{isSupabaseConfigured() && <button onClick={signOut}>退出登录</button>}</div>}</div>
+        <div className="more-wrap"><button className="icon-button" aria-label="更多操作" onClick={() => setMenuOpen((open) => !open)}><MoreIcon/></button>{menuOpen && <div className="more-menu"><button onClick={exportExcel}>导出 Excel</button><button onClick={() => router.push("/history")}>历史周报</button></div>}</div>
       </>}/>
 
-      {!isSupabaseConfigured() && <div className="demo-banner"><b>本地演示模式</b><span>未连接 Supabase，发布内容仅保存在当前浏览器。配置环境变量后即可启用账号登录和在线分享。</span></div>}
+      {!isSupabaseConfigured() && <div className="demo-banner"><b>本地演示模式</b><span>未连接 Supabase，发布内容仅保存在当前浏览器。配置环境变量后即可在线保存和分享。</span></div>}
 
       <main className="editor-main">
         <section className="controls-panel">

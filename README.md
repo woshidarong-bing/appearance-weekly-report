@@ -14,11 +14,10 @@ pnpm dev
 ## Supabase 配置
 
 1. 新建 Supabase 项目，在 SQL Editor 执行 `supabase/schema.sql`。
-2. 在 Authentication 中为编辑者创建邮箱账号；不要开放匿名注册。
-3. 复制 `.env.example` 为 `.env.local`，填写项目 URL 和 publishable key。旧项目的 legacy anon key 也兼容。
-4. 重启开发服务。
+2. 复制 `.env.example` 为 `.env.local`，填写项目 URL 和 publishable key。旧项目的 legacy anon key 也兼容。
+3. 重启开发服务。
 
-公开访问只允许读取 `status = published` 的周报；编辑、发布和历史管理要求已登录账号。
+当前版本无需账号和密码即可进入编辑端。Supabase 的匿名角色可读取、创建和更新周报；因此任何拿到编辑地址的人都可以修改内容，请仅在可信范围内分享编辑地址。
 
 ## 部署到 Vercel
 

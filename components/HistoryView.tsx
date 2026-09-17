@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import AppHeader from "./AppHeader";
 import { getLocalReports } from "@/lib/storage";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -12,8 +11,6 @@ import type { WeeklyReport } from "@/lib/types";
 export default function HistoryView() {
   const [reports, setReports] = useState<WeeklyReport[]>([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
-
   useEffect(() => {
     const supabase = getSupabase();
     if (!supabase) {
@@ -21,13 +18,11 @@ export default function HistoryView() {
       setLoading(false);
       return;
     }
-    supabase.auth.getUser().then(async ({ data: auth }) => {
-      if (!auth.user) { router.replace("/login"); return; }
-      const { data } = await supabase.from("weekly_reports").select("*").order("period_end", { ascending: false });
+    supabase.from("weekly_reports").select("*").order("period_end", { ascending: false }).then(({ data }) => {
       setReports((data ?? []) as WeeklyReport[]);
       setLoading(false);
     });
-  }, [router]);
+  }, []);
 
   const grouped = useMemo(() => reports.reduce<Record<string, WeeklyReport[]>>((acc, report) => {
     const year = report.week_id.slice(0, 4);

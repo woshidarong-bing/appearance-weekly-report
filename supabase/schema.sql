@@ -16,23 +16,30 @@ create table if not exists public.weekly_reports (
 alter table public.weekly_reports enable row level security;
 
 drop policy if exists "published reports are public" on public.weekly_reports;
-create policy "published reports are public"
+drop policy if exists "reports can be read without login" on public.weekly_reports;
+create policy "reports can be read without login"
   on public.weekly_reports for select
   to anon, authenticated
-  using (status = 'published' or auth.role() = 'authenticated');
+  using (true);
 
 drop policy if exists "editors can insert reports" on public.weekly_reports;
-create policy "editors can insert reports"
+drop policy if exists "reports can be created without login" on public.weekly_reports;
+create policy "reports can be created without login"
   on public.weekly_reports for insert
-  to authenticated
+  to anon, authenticated
   with check (true);
 
 drop policy if exists "editors can update reports" on public.weekly_reports;
-create policy "editors can update reports"
+drop policy if exists "reports can be updated without login" on public.weekly_reports;
+create policy "reports can be updated without login"
   on public.weekly_reports for update
-  to authenticated
+  to anon, authenticated
   using (true)
   with check (true);
+
+grant usage on schema public to anon, authenticated;
+revoke all on table public.weekly_reports from anon, authenticated;
+grant select, insert, update on table public.weekly_reports to anon, authenticated;
 
 create or replace function public.set_updated_at()
 returns trigger language plpgsql as $$
