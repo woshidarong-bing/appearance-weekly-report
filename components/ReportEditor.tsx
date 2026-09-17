@@ -6,7 +6,7 @@ import * as XLSX from "xlsx";
 import AppHeader from "./AppHeader";
 import AutoTextarea from "./AutoTextarea";
 import BossReportView from "./BossReportView";
-import { CheckIcon, CopyIcon, EyeIcon, MoreIcon, SendIcon, TrashIcon, UploadIcon } from "./Icons";
+import { CheckIcon, CopyIcon, DownloadIcon, EyeIcon, MoreIcon, SendIcon, TrashIcon, UploadIcon } from "./Icons";
 import { endOfWorkWeek, getISOWeekId, startOfWorkWeek, toLocalISO } from "@/lib/date";
 import { emptyReport, generateReport, parseExcelRows, taskDelayDays, taskInScope } from "@/lib/report";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
@@ -25,6 +25,7 @@ export default function ReportEditor() {
   const [scope, setScope] = useState<"week" | "all">("week");
   const [fileName, setFileName] = useState("尚未上传");
   const [preview, setPreview] = useState(false);
+  const [printRequested, setPrintRequested] = useState(false);
   const [publishState, setPublishState] = useState<{ open: boolean; loading: boolean; url: string; error: string }>({ open: false, loading: false, url: "", error: "" });
   const [menuOpen, setMenuOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -45,6 +46,20 @@ export default function ReportEditor() {
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekId]);
+
+  useEffect(() => {
+    if (!preview || !printRequested) return;
+    const finishPrinting = () => {
+      setPrintRequested(false);
+      setPreview(false);
+    };
+    const timer = window.setTimeout(() => window.print(), 250);
+    window.addEventListener("afterprint", finishPrinting, { once: true });
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("afterprint", finishPrinting);
+    };
+  }, [preview, printRequested]);
 
   function applyLoadedReport(report: WeeklyReport) {
     setStart(report.period_start);
@@ -152,13 +167,20 @@ export default function ReportEditor() {
     setMenuOpen(false);
   }
 
-  if (preview) return <><AppHeader compact actions={<button className="button" onClick={() => setPreview(false)}>返回编辑</button>}/><div className="preview-ribbon">预览模式 · 内容尚未发布</div><BossReportView data={data} start={start} end={end}/></>;
+  function exportPdf() {
+    setMenuOpen(false);
+    setPrintRequested(true);
+    setPreview(true);
+  }
+
+  if (preview) return <><AppHeader compact actions={<button className="button" onClick={() => { setPrintRequested(false); setPreview(false); }}>返回编辑</button>}/><div className="preview-ribbon">{printRequested ? "正在打开 PDF 导出窗口…" : "预览模式 · 内容尚未发布"}</div><BossReportView data={data} start={start} end={end}/></>;
 
   return (
     <div className="editor-shell">
       <AppHeader actions={<>
         <label className="button primary file-button"><UploadIcon/>上传任务池 Excel<input ref={fileRef} type="file" accept=".xlsx,.xls,.csv" onChange={(e) => handleFile(e.target.files?.[0])}/></label>
         <button className="button" onClick={() => setPreview(true)}><EyeIcon/>预览老板视角</button>
+        <button className="button" onClick={exportPdf}><DownloadIcon/>导出 PDF</button>
         <button className="button publish" onClick={publish}><SendIcon/>发布周报</button>
         <div className="more-wrap"><button className="icon-button" aria-label="更多操作" onClick={() => setMenuOpen((open) => !open)}><MoreIcon/></button>{menuOpen && <div className="more-menu"><button onClick={exportExcel}>导出 Excel</button><button onClick={() => router.push("/history")}>历史周报</button></div>}</div>
       </>}/>
