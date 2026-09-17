@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import WeeklyViewer from "@/components/WeeklyViewer";
 
 export default function Home() {
-  redirect("/weekly");
+  return <WeeklyViewer/>;
 }

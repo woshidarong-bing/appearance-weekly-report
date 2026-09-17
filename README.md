@@ -22,4 +22,4 @@ pnpm dev
 
 ## 部署到 Vercel
 
-将仓库导入 Vercel，配置与 `.env.example` 相同的两个环境变量后部署。`/weekly` 是长期分享地址，`/weekly/YYYY-wWW` 是每期固定快照地址。
+项目包含 GitHub Pages 自动部署工作流。将仓库设为公开，在 Actions secrets 中配置与 `.env.example` 相同的两个环境变量，再在 Pages 中选择 GitHub Actions 作为发布源即可部署。`/weekly/` 是长期分享地址，`/weekly/?weekId=YYYY-wWW` 是每期固定快照地址。

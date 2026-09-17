@@ -140,7 +140,8 @@ export default function ReportEditor() {
     } else {
       saveLocalReport(report);
     }
-    const url = `${window.location.origin}/weekly/${id}`;
+    const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+    const url = `${window.location.origin}${basePath}/weekly/?weekId=${encodeURIComponent(id)}`;
     setPublishState({ open: true, loading: false, url, error: "" });
   }
 
