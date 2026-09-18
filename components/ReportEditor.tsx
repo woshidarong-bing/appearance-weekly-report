@@ -25,10 +25,11 @@ export default function ReportEditor() {
   const [scope, setScope] = useState<"week" | "all">("week");
   const [fileName, setFileName] = useState("尚未上传");
   const [preview, setPreview] = useState(false);
-  const [printRequested, setPrintRequested] = useState(false);
+  const [pdfRequested, setPdfRequested] = useState(false);
   const [publishState, setPublishState] = useState<{ open: boolean; loading: boolean; url: string; error: string }>({ open: false, loading: false, url: "", error: "" });
   const [menuOpen, setMenuOpen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const reportRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
   const weekId = searchParams.get("weekId");
@@ -48,18 +49,57 @@ export default function ReportEditor() {
   }, [weekId]);
 
   useEffect(() => {
-    if (!preview || !printRequested) return;
-    const finishPrinting = () => {
-      setPrintRequested(false);
-      setPreview(false);
-    };
-    const timer = window.setTimeout(() => window.print(), 250);
-    window.addEventListener("afterprint", finishPrinting, { once: true });
+    if (!preview || !pdfRequested || !reportRef.current) return;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      try {
+        await document.fonts.ready;
+        const html2canvas = (await import("html2canvas")).default;
+        const { jsPDF } = await import("jspdf");
+        if (cancelled || !reportRef.current) return;
+
+        const source = reportRef.current;
+        const canvas = await html2canvas(source, {
+          backgroundColor: "#f6f8fb",
+          scale: 2,
+          useCORS: true,
+          windowWidth: source.scrollWidth,
+          windowHeight: source.scrollHeight,
+        });
+        if (cancelled) return;
+
+        const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4", compress: true });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const margin = 8;
+        const contentWidth = pageWidth - margin * 2;
+        const contentHeight = pageHeight - margin * 2;
+        const sourcePageHeight = Math.floor((contentHeight / contentWidth) * canvas.width);
+
+        for (let sourceY = 0, page = 0; sourceY < canvas.height; sourceY += sourcePageHeight, page += 1) {
+          const chunkHeight = Math.min(sourcePageHeight, canvas.height - sourceY);
+          const chunk = document.createElement("canvas");
+          chunk.width = canvas.width;
+          chunk.height = chunkHeight;
+          chunk.getContext("2d")?.drawImage(canvas, 0, sourceY, canvas.width, chunkHeight, 0, 0, canvas.width, chunkHeight);
+          if (page > 0) pdf.addPage();
+          pdf.addImage(chunk.toDataURL("image/png"), "PNG", margin, margin, contentWidth, (chunkHeight / canvas.width) * contentWidth, undefined, "FAST");
+        }
+        pdf.save(`外观小组周报_${start}_${end}.pdf`);
+      } catch {
+        setPublishState({ open: true, loading: false, url: "", error: "PDF 生成失败，请稍后重试。" });
+      } finally {
+        if (!cancelled) {
+          setPdfRequested(false);
+          setPreview(false);
+        }
+      }
+    }, 180);
     return () => {
+      cancelled = true;
       window.clearTimeout(timer);
-      window.removeEventListener("afterprint", finishPrinting);
     };
-  }, [preview, printRequested]);
+  }, [end, pdfRequested, preview, start]);
 
   function applyLoadedReport(report: WeeklyReport) {
     setStart(report.period_start);
@@ -169,11 +209,11 @@ export default function ReportEditor() {
 
   function exportPdf() {
     setMenuOpen(false);
-    setPrintRequested(true);
+    setPdfRequested(true);
     setPreview(true);
   }
 
-  if (preview) return <><AppHeader compact actions={<button className="button" onClick={() => { setPrintRequested(false); setPreview(false); }}>返回编辑</button>}/><div className="preview-ribbon">{printRequested ? "正在打开 PDF 导出窗口…" : "预览模式 · 内容尚未发布"}</div><BossReportView data={data} start={start} end={end}/></>;
+  if (preview) return <><AppHeader compact actions={<button className="button" onClick={() => { setPdfRequested(false); setPreview(false); }}>返回编辑</button>}/><div className="preview-ribbon">{pdfRequested ? "正在生成高清彩色 PDF…" : "预览模式 · 内容尚未发布"}</div><div ref={reportRef}><BossReportView data={data} start={start} end={end}/></div></>;
 
   return (
     <div className="editor-shell">
